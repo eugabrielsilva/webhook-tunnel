@@ -1,17 +1,17 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
-const WS_URL = args.from || 'ws://localhost';
-const LOCAL_URL = args.to || 'http://localhost:3000/webhook';
+const SERVER_URL = args.server || 'ws://localhost';
+const TARGET_URL = args.target || 'http://localhost:3000/webhook';
 
 const WebSocket = require('ws');
 const axios = require('axios');
 const chalk = require('chalk');
 
-const ws = new WebSocket(WS_URL);
+const ws = new WebSocket(SERVER_URL);
 
 ws.on('open', () => {
-    console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${WS_URL}`));
-    console.log(chalk.yellow(`[${new Date().toISOString()}] Encaminhando mensagens para ${LOCAL_URL}`));
+    console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${SERVER_URL}`));
+    console.log(chalk.yellow(`[${new Date().toISOString()}] Encaminhando mensagens para ${TARGET_URL}`));
 });
 
 ws.on('message', async (message) => {
@@ -22,11 +22,12 @@ ws.on('message', async (message) => {
 
         try {
             const response = await axios.post(
-                LOCAL_URL,
-                data.body
+                TARGET_URL,
+                data.body,
+                {headers: data.headers}
             );
 
-            console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${LOCAL_URL}`));
+            console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${TARGET_URL}`));
         } catch(err) {
             console.log(chalk.red(`[${new Date().toISOString()}] Falha ao encaminhar webhook:`, err.message));
         }

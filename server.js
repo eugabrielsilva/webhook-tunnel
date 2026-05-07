@@ -17,54 +17,53 @@ let clientSockets = [];
 
 wss.on('connection', (ws, req) => {
     const forwardedFor = req.headers['x-forwarded-for'];
-    const rawIp = Array.isArray(forwardedFor)
-        ? forwardedFor[0]
-        : (forwardedFor || req.socket.remoteAddress || 'IP Desconhecido');
+    const rawIp = Array.isArray(forwardedFor) ? forwardedFor[0] : (forwardedFor || req.socket.remoteAddress || 'IP Desconhecido');
     const clientIp = String(rawIp).split(',')[0].trim().replace('::ffff:', '');
 
-    console.log(chalk.yellow(`[${new Date().toISOString()}] Cliente conectado: ${clientIp}`));
+    console.log(chalk.green(`[${new Date().toISOString()}] Cliente conectado ${clientIp}`));
 
-    clientSockets.push(ws);
+    clientSockets.push({ws, clientIp});
 
     ws.on('error', (error) => {
         console.log(chalk.red(`[${new Date().toISOString()}] Erro no cliente ${clientIp}:`), error.message);
     });
 
     ws.on('close', () => {
-        clientSockets = clientSockets.filter(socket => socket !== ws);
-        console.log(chalk.yellow(`[${new Date().toISOString()}] Cliente desconectado: ${clientIp}`));
+        clientSockets = clientSockets.filter(socket => socket.ws !== ws);
+        console.log(chalk.red(`[${new Date().toISOString()}] Cliente desconectado ${clientIp}`));
     });
 });
 
 app.post('/webhook', (req, res) => {
-    const activeSockets = clientSockets.filter((socket) => socket.readyState === WebSocket.OPEN);
+    const activeSockets = clientSockets.filter(socket => socket.ws.readyState === WebSocket.OPEN);
     clientSockets = activeSockets;
 
     console.log(chalk.blue(`[${new Date().toISOString()}] Webhook recebido:`, JSON.stringify(req.body)));
 
     if(!activeSockets.length) {
-        console.log(chalk.red(`[${new Date().toISOString()}] Nenhum cliente conectado.`));
-        return res.status(503).json({error: 'Nenhum cliente conectado.'});
+        console.log(chalk.red(`[${new Date().toISOString()}] Nenhum cliente conectado para encaminhar o webhook.`));
+        return res.status(503).json({error: 'Nenhum cliente conectado para encaminhar o webhook.'});
     }
 
     const payload = JSON.stringify({
         event: 'webhook',
-        body: req.body
+        body: req.body,
+        headers: req.headers
     });
 
     let delivered = 0;
 
-    activeSockets.forEach((socket) => {
+    activeSockets.forEach(socket => {
         try {
-            socket.send(payload);
+            socket.ws.send(payload);
             delivered++;
+            console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${socket.clientIp}`));
         } catch(error) {
-            console.log(`[${new Date().toISOString()}] Falha ao encaminhar para cliente:`, error.message);
+            console.log(`[${new Date().toISOString()}] Falha ao encaminhar webhook para cliente ${socket.clientIp}:`, error.message);
         }
     });
 
-    res.json({message: `Webhook encaminhado para ${delivered} clientes.`});
-    console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${delivered} clientes`));
+    res.json({message: `Webhook encaminhado para ${delivered} cliente(s).`});
 });
 
 server.listen(PORT, () => {
