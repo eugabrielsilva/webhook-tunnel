@@ -42,7 +42,7 @@ app.post('/webhook', (req, res) => {
     const activeSockets = clientSockets.filter(socket => socket.ws.readyState === WebSocket.OPEN);
     clientSockets = activeSockets;
 
-    console.log(chalk.blue(`[${new Date().toISOString()}] Webhook recebido:`, JSON.stringify(req.body)));
+    console.log(chalk.cyan(`[${new Date().toISOString()}] Webhook recebido:`, JSON.stringify(req.body)));
 
     if(!activeSockets.length) {
         console.log(chalk.red(`[${new Date().toISOString()}] Nenhum cliente conectado para encaminhar o webhook.`));
