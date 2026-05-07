@@ -1,6 +1,6 @@
-// -------- CONFIGURAÇÕES SERVIDOR ----------------
-const PORT = 80;
-// ------------------------------------------------
+const minimist = require('minimist');
+const args = minimist(process.argv.slice(2));
+const PORT = args.port || 80;
 
 const express = require('express');
 const http = require('http');

@@ -1,7 +1,7 @@
-// -------- CONFIGURAÇÕES CLIENTE -----------------
-const WS_URL = 'ws://localhost:80';
-const LOCAL_URL = 'http://localhost:3000/webhook';
-// ------------------------------------------------
+const minimist = require('minimist');
+const args = minimist(process.argv.slice(2));
+const WS_URL = args.from || 'ws://localhost';
+const LOCAL_URL = args.to || 'http://localhost:3000/webhook';
 
 const WebSocket = require('ws');
 const axios = require('axios');
@@ -11,6 +11,7 @@ const ws = new WebSocket(WS_URL);
 
 ws.on('open', () => {
     console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${WS_URL}`));
+    console.log(chalk.yellow(`[${new Date().toISOString()}] Encaminhando mensagens para ${LOCAL_URL}`));
 });
 
 ws.on('message', async (message) => {
