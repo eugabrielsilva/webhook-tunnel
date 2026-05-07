@@ -34,6 +34,10 @@ wss.on('connection', (ws, req) => {
     });
 });
 
+app.get('/', (req, res) => {
+    res.redirect('https://gabrielsilva.dev.br');
+});
+
 app.post('/webhook', (req, res) => {
     const activeSockets = clientSockets.filter(socket => socket.ws.readyState === WebSocket.OPEN);
     clientSockets = activeSockets;
