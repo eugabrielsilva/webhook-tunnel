@@ -1,34 +1,119 @@
-# webhook-tunnel
+# Webhook Tunnel
 
-Túnel para testar Webhooks localmente. Ideal para validar fluxos de notificações de gateways de pagamento ou qualquer outra ferramenta online, encaminhando as requisições diretamente para sua máquina local.
+Ferramenta para criar um **túnel HTTP** e testar webhooks localmente.
+
+Ideal para desenvolvimento e validação de integrações com gateways de pagamento, APIs externas e qualquer serviço que envie notificações via webhook.
+
+O **webhook-tunnel** recebe requisições em um servidor público e as encaminha diretamente para sua aplicação rodando localmente.
+
+## Casos de uso
+
+- Teste de webhooks de gateways de pagamento
+- Desenvolvimento local de integrações
+- Recebimento de callbacks externos
+- Debug de notificações HTTP
+- Desenvolvimento de APIs locais sem deploy público
+
+## Como funciona
+
+O projeto é dividido em duas partes:
+
+- **Servidor:** recebe as requisições públicas da internet.
+- **Cliente:** mantém uma conexão com o servidor e encaminha as requisições para sua aplicação local.
+
+Fluxo:
+
+```
+Serviço Externo → Servidor Público → Cliente Local → Sua API Local
+```
+
+## Requisitos
+
+- **Node.js versão 22** ou superior instalado
+- Um servidor com acesso público à internet (VPS, cloud ou servidor próprio)
+- Domínio ou IP público (opcional, mas recomendado)
 
 ## Configuração do Servidor
 
-Um servidor online deve ser configurado inicialmente para servir como ponto de entrada público para as notificações.
+O servidor funciona como ponto de entrada público para os webhooks.
 
-O servidor precisa estar acessível publicamente pelo IP ou devidamente apontado pra uma URL usando DNS, e deve ter suporte para rodar Node.js.
+Ele deve estar acessível pela internet através de um IP público ou domínio configurado via DNS.
 
-### Passos para configuração
+### Instalação
 
-1. Clone o repositório na pasta pública do servidor.
-2. Inicie o servidor através do comando `npm start` ou `npm run server`.
+Clone o repositório no servidor:
 
-O servidor será iniciado automaticamente e ficará ouvindo requisições na **porta 80**. Para definir uma porta diferente, use um dos comandos na inicialização:
+```bash
+git clone https://github.com/eugabrielsilva/webhook-tunnel
+cd webhook-tunnel
+```
 
-- `npm start -- --port=9000` ou
-- `npm run server -- --port=9000`.
+Instale as dependências:
+
+```bash
+npm install
+```
+
+### Inicialização
+
+Inicie o servidor com:
+
+```bash
+npm start
+```
+
+ou
+
+```bash
+npm run server
+```
+
+> [!NOTE]
+> Por padrão, o servidor será iniciado na porta **80**.
+
+Você pode alterar a porta informando o número desejado como primeiro parâmetro na inicialização:
+
+```bash
+npm run server 9000
+```
+
+Nesse exemplo, o servidor será iniciado na porta **9000**.
 
 ## Configuração do Cliente
 
-O cliente deve rodar na máquina local onde você quer receber as notificações. Deve ter suporte para rodar Node.js.
+O cliente deve ser executado na máquina local que receberá os webhooks.
 
-### Passos para configuração
+Ele será responsável por encaminhar as requisições recebidas pelo servidor para sua aplicação local.
 
-1. Clone o repositório na máquina local.
-2. Inicie o cliente através do comando:
+### Instalação
 
-`npm run client -- --server=<IP ou URL do servidor> --target=<URL de destino>`.
+Clone o repositório na máquina local:
 
-O argumento **server** deve incluir o endereço de IP público ou URL do servidor configurado previamente. Por padrão, é usado `http://localhost`.
+```bash
+git clone https://github.com/eugabrielsilva/webhook-tunnel
+cd webhook-tunnel
+```
 
-O argumento **target** se refere à URL de destino (na sua máquina local) para onde as notificações devem ser encaminhadas. Por padrão, é usado `http://localhost:3000/webhook`. Essa URL deve estar de acordo com sua implementação local.
+Instale as dependências:
+
+```bash
+npm install
+```
+
+### Inicialização
+
+Execute o cliente com:
+
+```bash
+npm run client <IP-ou-URL-do-servidor> <URL-local>
+```
+
+O primeiro parâmetro deve ser o endereço do servidor público configurado anteriormente. Se estiver rodando numa porta diferente da padrão, é necessário informá-la.
+
+O segundo parâmetro é a URL local que irá receber as notificações encaminhadas. Essa URL deve apontar para o endpoint da sua aplicação local responsável pelo webhook.
+
+Exemplo:
+
+```bash
+npm run client https://meu-servidor.com http://localhost:3000/webhook
+```
