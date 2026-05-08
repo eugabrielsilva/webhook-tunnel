@@ -1,5 +1,6 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
+
 const PORT = args.port || 80;
 
 const express = require('express');
@@ -38,6 +39,10 @@ app.get('/', (req, res) => {
     res.redirect('https://gabrielsilva.dev.br');
 });
 
+app.get('/ping', (req, res) => {
+    res.json({message: 'pong'});
+});
+
 app.post('/webhook', (req, res) => {
     const activeSockets = clientSockets.filter(socket => socket.ws.readyState === WebSocket.OPEN);
     clientSockets = activeSockets;
@@ -71,5 +76,7 @@ app.post('/webhook', (req, res) => {
 });
 
 server.listen(PORT, () => {
+    console.log(chalk.green(`[Webhook Tunnel] - Servidor`));
+    console.log('');
     console.log(chalk.yellow(`[${new Date().toISOString()}] Servidor iniciado na porta ${PORT}`));
 });
