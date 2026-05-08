@@ -5,6 +5,7 @@ const SERVER_URL = args.server || 'http://localhost';
 const TARGET_URL = args.target || 'http://localhost:3000/webhook';
 const TIMEOUT = args.timeout || 5000;
 const RETRIES = args.retries || 5;
+const PING = args.ping || 30000;
 
 const WebSocket = require('ws');
 const axios = require('axios');
@@ -15,6 +16,7 @@ const wsUrl = SERVER_URL.replace(/^http(s?):\/\//, 'ws$1://');
 
 let ws = null;
 let retryCount = 0;
+let dontPing = true;
 
 console.log(chalk.green(`[Webhook Tunnel] - Cliente`));
 console.log(chalk.magenta(`${httpUrl}/webhook`) + ' => ' + chalk.cyan(TARGET_URL));
@@ -24,6 +26,8 @@ async function connect() {
     try {
         await axios.get(`${httpUrl}/ping`);
     } catch(error) {
+        dontPing = true;
+
         if(retryCount >= RETRIES) {
             console.log(chalk.red(`[${new Date().toISOString()}] Não foi possível conectar ao servidor.`));
             process.exit(1);
@@ -38,8 +42,9 @@ async function connect() {
     ws = new WebSocket(wsUrl);
 
     ws.on('open', () => {
-        console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${SERVER_URL}`));
+        dontPing = false;
         retryCount = 0;
+        console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${SERVER_URL}`));
     });
 
     ws.on('message', async (message) => {
@@ -63,15 +68,22 @@ async function connect() {
     });
 
     ws.on('close', () => {
-        console.log(chalk.red(`[${new Date().toISOString()}] Conexão encerrada. Tentando reconectar em ${TIMEOUT / 1000}s...`));
+        dontPing = true;
         retryCount++;
+        console.log(chalk.red(`[${new Date().toISOString()}] Conexão encerrada. Tentando reconectar em ${TIMEOUT / 1000}s...`));
         setTimeout(connect, TIMEOUT);
     });
 
     ws.on('error', (err) => {
+        dontPing = true;
         console.log(chalk.red(`[${new Date().toISOString()}] Erro na conexão: ${err.message}`));
         ws.terminate();
     });
 }
+
+setInterval(() => {
+    if(dontPing) return;
+    axios.get(`${httpUrl}/ping`);
+}, PING);
 
 connect();
