@@ -1,7 +1,7 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
 
-const PORT = args?._?.[1] ?? args.port ?? 7777; // first argument or --port
+const PORT = args?._?.[1] ?? args.port ?? 80; // first argument or --port
 const TIMEOUT = args['timeout'] ?? 30000; // --timeout
 const VERBOSE = args.verbose ?? false; // --verbose
 

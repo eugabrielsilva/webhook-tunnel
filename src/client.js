@@ -1,7 +1,7 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
 
-const SERVER_URL = args?._?.[1] ?? args.server ?? 'http://localhost:7777'; // first argument or --server
+const SERVER_URL = args?._?.[1] ?? args.server ?? 'http://localhost'; // first argument or --server
 const TARGET_URL = args?._?.[2] ?? args.target ?? 'http://localhost:3000/webhook'; // second argument or --target
 const TIMEOUT = args.timeout ?? 5000; // --timeout
 const RETRY = args.retry ?? 5; // --retry
