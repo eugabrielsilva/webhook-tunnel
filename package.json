@@ -1,14 +1,14 @@
 {
   "name": "webhook-tunnel",
-  "version": "0.1.1",
-  "description": "Ferramenta para criar um túnel HTTP e testar webhooks localmente.",
+  "version": "0.2.0",
+  "description": "Development tool for creating an HTTP tunnel and testing webhooks locally",
   "bin": {
-    "webhook-tunnel": "./client.js"
+    "webhook-tunnel": "./cli.js"
   },
   "scripts": {
-    "start": "node server.js",
-    "client": "node client.js",
-    "server": "node server.js"
+    "start": "node cli.js",
+    "server": "node cli.js server",
+    "client": "node cli.js client"
   },
   "dependencies": {
     "axios": "^1.16.0",

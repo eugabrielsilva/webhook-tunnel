@@ -1,8 +1,7 @@
-#!/usr/bin/env node
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
 
-const PORT = args?._?.[0] ?? args.port ?? 80; // primeiro argumento ou --port
+const PORT = args?._?.[1] ?? args.port ?? 7777; // first argument or --port
 const TIMEOUT = args['timeout'] ?? 30000; // --timeout
 const VERBOSE = args.verbose ?? false; // --verbose
 
@@ -68,11 +67,11 @@ async function dispatchWebhookToClient(payload) {
 
         try {
             if(VERBOSE) {
-                console.log(chalk.dim(`[${new Date().toISOString()}] Encaminhando webhook com Request ID ${payload.requestId}`));
+                console.log(chalk.dim(`[${new Date().toISOString()}] Forwarding webhook with Request ID ${payload.requestId}`));
             }
 
             clientSocket.send(JSON.stringify(payload));
-            console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${clientIp}`));
+            console.log(chalk.green(`[${new Date().toISOString()}] Webhook forwarded to ${clientIp}`));
         } catch(error) {
             clearTimeout(timeoutId);
             pendingRequests.delete(payload.requestId);
@@ -90,7 +89,7 @@ function rejectAllPendingRequests(reason) {
 
 wss.on('connection', (ws, req) => {
     const forwardedFor = req.headers['x-forwarded-for'];
-    const rawIp = Array.isArray(forwardedFor) ? forwardedFor[0] : (forwardedFor || req.socket.remoteAddress || 'IP Desconhecido');
+    const rawIp = Array.isArray(forwardedFor) ? forwardedFor[0] : (forwardedFor || req.socket.remoteAddress || 'Unknown IP');
     const parsedIp = String(rawIp).split(',')[0].trim().replace('::ffff:', '');
 
     if(clientSocket) {
@@ -100,7 +99,7 @@ wss.on('connection', (ws, req) => {
     clientIp = parsedIp;
     clientSocket = ws;
 
-    console.log(chalk.green(`[${new Date().toISOString()}] Cliente conectado ${clientIp}`));
+    console.log(chalk.green(`[${new Date().toISOString()}] Client connected ${clientIp}`));
 
     ws.on('message', (message) => {
         let data;
@@ -108,7 +107,7 @@ wss.on('connection', (ws, req) => {
         try {
             data = JSON.parse(String(message));
         } catch(error) {
-            console.log(chalk.red(`[${new Date().toISOString()}] Mensagem inválida recebida do cliente: ${error.message}`));
+            console.log(chalk.red(`[${new Date().toISOString()}] Invalid message received from client: ${error.message}`));
             return;
         }
 
@@ -122,11 +121,11 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('error', (error) => {
-        console.log(chalk.red(`[${new Date().toISOString()}] Erro no cliente ${clientIp}: ${error.message}`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Client error ${clientIp}: ${error.message}`));
     });
 
     ws.on('close', () => {
-        console.log(chalk.red(`[${new Date().toISOString()}] Cliente desconectado ${clientIp}`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Client disconnected ${clientIp}`));
         rejectAllPendingRequests('CLIENT_DISCONNECTED');
         clientSocket = null;
         clientIp = null;
@@ -142,7 +141,7 @@ app.get('/ping', (req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
-    console.log(chalk.cyan(`[${new Date().toISOString()}] Webhook recebido:`, JSON.stringify(req.body)));
+    console.log(chalk.cyan(`[${new Date().toISOString()}] Webhook received:`, JSON.stringify(req.body)));
 
     const requestId = generateRequestId();
     const payload = {
@@ -167,27 +166,27 @@ app.post('/webhook', async (req, res) => {
         return res.status(status).send(clientResult?.body ?? null);
     } catch(error) {
         if(error.message === 'NO_CLIENT_CONNECTED') {
-            console.log(chalk.red(`[${new Date().toISOString()}] Nenhum cliente conectado para encaminhar o webhook.`));
-            return res.status(503).json({error: 'Nenhum cliente conectado para encaminhar o webhook.'});
+            console.log(chalk.red(`[${new Date().toISOString()}] No client connected to forward the webhook.`));
+            return res.status(503).json({error: 'No client connected to forward the webhook.'});
         }
 
         if(error.message === 'TIMEOUT') {
-            console.log(chalk.red(`[${new Date().toISOString()}] Tempo de resposta do cliente excedido.`));
-            return res.status(504).json({error: 'Tempo de resposta do cliente excedido.'});
+            console.log(chalk.red(`[${new Date().toISOString()}] Client response timeout.`));
+            return res.status(504).json({error: 'Client response timeout.'});
         }
 
         if(error.message === 'CLIENT_DISCONNECTED') {
-            console.log(chalk.red(`[${new Date().toISOString()}] Cliente desconectado durante a resposta.`));
-            return res.status(503).json({error: 'Cliente desconectado durante a resposta.'});
+            console.log(chalk.red(`[${new Date().toISOString()}] Client disconnected during response.`));
+            return res.status(503).json({error: 'Client disconnected during response.'});
         }
 
-        console.log(chalk.red(`[${new Date().toISOString()}] Falha ao encaminhar webhook para cliente ${clientIp}: ${error.message}`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Error forwarding webhook to client ${clientIp}: ${error.message}`));
 
-        return res.status(502).json({error: 'Falha ao encaminhar webhook para o destino.'});
+        return res.status(502).json({error: 'Error forwarding webhook to client.'});
     }
 });
 
 server.listen(PORT, () => {
-    console.log(chalk.green(`[Webhook Tunnel] - Servidor`));
-    console.log(chalk.yellow(`[${new Date().toISOString()}] Servidor iniciado na porta ${PORT}`));
+    console.log(chalk.green(`[Webhook Tunnel] - Server`));
+    console.log(chalk.yellow(`[${new Date().toISOString()}] Server started on port ${PORT}`));
 });

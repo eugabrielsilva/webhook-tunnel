@@ -1,9 +1,8 @@
-#!/usr/bin/env node
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
 
-const SERVER_URL = args?._?.[0] ?? args.server ?? 'http://localhost'; // primeiro argumento ou --server
-const TARGET_URL = args?._?.[1] ?? args.target ?? 'http://localhost:3000/webhook'; // segundo argumento ou --target
+const SERVER_URL = args?._?.[1] ?? args.server ?? 'http://localhost:7777'; // first argument or --server
+const TARGET_URL = args?._?.[2] ?? args.target ?? 'http://localhost:3000/webhook'; // second argument or --target
 const TIMEOUT = args.timeout ?? 5000; // --timeout
 const RETRY = args.retry ?? 5; // --retry
 const PING = args.ping ?? 30000; // --ping
@@ -43,27 +42,27 @@ function filterForwardHeaders(headers = {}) {
 async function connect() {
     try {
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] Tentando requisição para ${httpUrl}/ping...`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] Trying to request ${httpUrl}/ping...`));
         }
 
         const checkResponse = await axios.get(`${httpUrl}/ping`);
 
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] Requisição bem-sucedida. Status: ${checkResponse.status}. Conectando ao websocket...`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] Request successful. Status: ${checkResponse.status}. Connecting to websocket...`));
         }
     } catch(error) {
         dontPing = true;
 
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] Falha na requisição: ${error.message}`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] Request failed: ${error.message}`));
         }
 
         if(retryCount >= RETRY) {
-            console.log(chalk.red(`[${new Date().toISOString()}] Não foi possível conectar ao servidor.`));
+            console.log(chalk.red(`[${new Date().toISOString()}] Failed to connect to server.`));
             process.exit(1);
         }
 
-        console.log(chalk.red(`[${new Date().toISOString()}] Falha na conexão com o servidor. Tentando novamente em ${TIMEOUT / 1000}s...`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Server connection failed. Retrying in ${TIMEOUT / 1000}s...`));
 
         retryCount++;
         setTimeout(connect, TIMEOUT);
@@ -75,7 +74,7 @@ async function connect() {
     ws.on('open', () => {
         dontPing = false;
         retryCount = 0;
-        console.log(chalk.yellow(`[${new Date().toISOString()}] Conectado ao servidor em ${SERVER_URL}`));
+        console.log(chalk.yellow(`[${new Date().toISOString()}] Connected to server at ${SERVER_URL}`));
     });
 
     ws.on('message', async (message) => {
@@ -85,14 +84,14 @@ async function connect() {
             data = JSON.parse(String(message));
         } catch(error) {
             if(VERBOSE) {
-                console.log(chalk.dim(`[${new Date().toISOString()}] Mensagem inválida recebida do servidor: ${error.message}`));
+                console.log(chalk.dim(`[${new Date().toISOString()}] Invalid message received from server: ${error.message}`));
             }
             return;
         }
 
         if(data.event === 'webhook') {
             const requestId = data.requestId;
-            console.log(chalk.cyan(`[${new Date().toISOString()}] Webhook recebido:`, JSON.stringify(data.body)));
+            console.log(chalk.cyan(`[${new Date().toISOString()}] Webhook received:`, JSON.stringify(data.body)));
 
             if(VERBOSE) {
                 console.log(chalk.dim(`[${new Date().toISOString()}] Request ID ${requestId}`));
@@ -100,7 +99,7 @@ async function connect() {
 
             try {
                 if(VERBOSE) {
-                    console.log(chalk.dim(`[${new Date().toISOString()}] Tentando encaminhar requisição para ${TARGET_URL}...`));
+                    console.log(chalk.dim(`[${new Date().toISOString()}] Trying to forward request to ${TARGET_URL}...`));
                 }
 
                 const response = await axios({
@@ -112,7 +111,7 @@ async function connect() {
                 });
 
                 if(VERBOSE) {
-                    console.log(chalk.dim(`[${new Date().toISOString()}] Requisição bem-sucedida. Status: ${response.status}. Devolvendo resposta para o servidor...`));
+                    console.log(chalk.dim(`[${new Date().toISOString()}] Request successful. Status: ${response.status}. Returning response to server...`));
                 }
 
                 ws.send(JSON.stringify({
@@ -123,7 +122,7 @@ async function connect() {
                     body: response.data
                 }));
 
-                console.log(chalk.green(`[${new Date().toISOString()}] Webhook encaminhado para ${TARGET_URL}`));
+                console.log(chalk.green(`[${new Date().toISOString()}] Webhook forwarded to ${TARGET_URL}`));
             } catch(error) {
                 const status = error.response?.status ?? 502;
                 const headers = error.response?.headers ?? {'content-type': 'application/json'};
@@ -139,15 +138,15 @@ async function connect() {
                     }));
                 } catch(sendError) {
                     if(VERBOSE) {
-                        console.log(chalk.dim(`[${new Date().toISOString()}] Falha ao devolver resposta ao servidor: ${sendError.message}`));
+                        console.log(chalk.dim(`[${new Date().toISOString()}] Failure to return response to server: ${sendError.message}`));
                     }
                 }
 
                 if(VERBOSE) {
-                    console.log(chalk.dim(`[${new Date().toISOString()}] Falha na requisição: ${error.message}`));
+                    console.log(chalk.dim(`[${new Date().toISOString()}] Request failed: ${error.message}`));
                 }
 
-                console.log(chalk.red(`[${new Date().toISOString()}] Falha ao encaminhar webhook: ${error.message}`));
+                console.log(chalk.red(`[${new Date().toISOString()}] Failed to forward webhook: ${error.message}`));
             }
         }
     });
@@ -155,13 +154,13 @@ async function connect() {
     ws.on('close', () => {
         dontPing = true;
         retryCount++;
-        console.log(chalk.red(`[${new Date().toISOString()}] Conexão encerrada. Tentando reconectar em ${TIMEOUT / 1000}s...`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Connection closed. Trying to reconnect in ${TIMEOUT / 1000}s...`));
         setTimeout(connect, TIMEOUT);
     });
 
     ws.on('error', (err) => {
         dontPing = true;
-        console.log(chalk.red(`[${new Date().toISOString()}] Erro na conexão: ${err.message}`));
+        console.log(chalk.red(`[${new Date().toISOString()}] Connection error: ${err.message}`));
         ws.terminate();
     });
 }
@@ -171,24 +170,24 @@ setInterval(async () => {
 
     try {
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Tentando requisição em ${httpUrl}/ping...`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Trying request to ${httpUrl}/ping...`));
         }
 
         await axios.get(`${httpUrl}/ping`);
 
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Requisição bem-sucedida.`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Request successful.`));
         }
     } catch(error) {
         dontPing = true;
 
         if(VERBOSE) {
-            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Falha na requisição: ${error.message}`));
+            console.log(chalk.dim(`[${new Date().toISOString()}] (Keep-Alive) Request failed: ${error.message}`));
         }
     }
 }, PING);
 
-console.log(chalk.green(`[Webhook Tunnel] - Cliente`));
+console.log(chalk.green(`[Webhook Tunnel] - Client`));
 console.log(chalk.magenta(`${httpUrl}/webhook`) + ' => ' + chalk.cyan(TARGET_URL));
 console.log('');
 
