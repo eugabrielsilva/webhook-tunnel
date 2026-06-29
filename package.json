@@ -1,5 +1,5 @@
 {
-  "name": "webhook-tunnel",
+  "name": "@eugabrielsilva/webhook-tunnel",
   "version": "0.2.0",
   "description": "Development tool for creating an HTTP tunnel and testing webhooks locally",
   "bin": {
@@ -13,8 +13,8 @@
   "dependencies": {
     "axios": "^1.16.0",
     "chalk": "^4.1.2",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "http": "^0.0.1-security",
     "minimist": "^1.2.8",
     "ws": "^8.20.0"
   }

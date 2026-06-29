@@ -1,20 +1,26 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
-
-const SERVER_URL = args?._?.[1] ?? args.server ?? 'http://localhost'; // first argument or --server
-const TARGET_URL = args?._?.[2] ?? args.target ?? 'http://localhost:3000/webhook'; // second argument or --target
-const TIMEOUT = args.timeout ?? 5000; // --timeout
-const RETRY = args.retry ?? 5; // --retry
-const PING = args.ping ?? 30000; // --ping
-const KEEP_ALIVE = args['keep-alive'] ?? false; // --keep-alive
-const VERBOSE = args.verbose ?? false; // --verbose
-
 const WebSocket = require('ws');
 const axios = require('axios');
 const chalk = require('chalk');
+require('dotenv').config({quiet: true});
 
-const httpUrl = SERVER_URL.replace(/^ws(s?):\/\//, 'http$1://').replace(/\/+$/, '');
-const wsUrl = SERVER_URL.replace(/^http(s?):\/\//, 'ws$1://');
+// Parse arguments
+const RAW_SERVER_URL = args?._?.[1] ?? args.server ?? process.env.CLIENT_SERVER_URL ?? 'http://localhost:5555';
+const RAW_TARGET_URL = args?._?.[2] ?? args.target ?? process.env.CLIENT_TARGET_URL ?? 'http://localhost:3000/webhook';
+const TIMEOUT = args.timeout ?? process.env.CLIENT_TIMEOUT ?? 5000; // --timeout
+const RETRY = args.retry ?? process.env.CLIENT_RETRY ?? 5; // --retry
+const PING = args.ping ?? process.env.CLIENT_PING ?? 30000; // --ping
+const KEEP_ALIVE = args['keep-alive'] ?? process.env.CLIENT_KEEP_ALIVE ?? false; // --keep-alive
+const VERBOSE = args.verbose ?? process.env.CLIENT_VERBOSE ?? false; // --verbose
+
+// Normalize URLs
+const SERVER_URL = /^(https?|wss?):\/\//i.test(RAW_SERVER_URL) ? RAW_SERVER_URL : `http://${RAW_SERVER_URL}`;
+const TARGET_URL = /^https?:\/\//i.test(RAW_TARGET_URL) ? RAW_TARGET_URL : `http://${RAW_TARGET_URL}`;
+
+// Derive HTTP and WebSocket URLs
+const httpUrl = SERVER_URL.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/+$/, '');
+const wsUrl = SERVER_URL.replace(/^http(s?):\/\//i, 'ws$1://');
 
 let ws = null;
 let retryCount = 0;

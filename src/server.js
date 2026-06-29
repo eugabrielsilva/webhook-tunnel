@@ -1,16 +1,18 @@
 const minimist = require('minimist');
 const args = minimist(process.argv.slice(2));
-
-const PORT = args?._?.[1] ?? args.port ?? 80; // first argument or --port
-const TIMEOUT = args['timeout'] ?? 30000; // --timeout
-const VERBOSE = args.verbose ?? false; // --verbose
-
 const express = require('express');
-const http = require('http');
+const http = require('node:http');
 const WebSocket = require('ws');
 const chalk = require('chalk');
 const crypto = require('node:crypto');
+require('dotenv').config({quiet: true});
 
+// Parse arguments
+const PORT = args?._?.[1] ?? args.port ?? process.env.SERVER_PORT ?? 5555;
+const TIMEOUT = args['timeout'] ?? process.env.SERVER_TIMEOUT ?? 30000; // --timeout
+const VERBOSE = args.verbose ?? process.env.SERVER_VERBOSE ?? false; // --verbose
+
+// Create server
 const app = express();
 app.use(express.json());
 
@@ -130,10 +132,6 @@ wss.on('connection', (ws, req) => {
         clientSocket = null;
         clientIp = null;
     });
-});
-
-app.get('/', (req, res) => {
-    res.redirect('https://gabrielsilva.dev.br');
 });
 
 app.get('/ping', (req, res) => {
